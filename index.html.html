@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AZ-104 Study App</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: rgba(99,179,237,0.15);
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --green: #10b981;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --text: #f1f5f9;
+    --muted: #64748b;
+    --card-h: 280px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+
+  /* animated grid bg */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  #app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    backdrop-filter: blur(10px);
+    background: rgba(10,14,26,0.8);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: #fff; letter-spacing: -1px;
+  }
+  .logo-text { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-text span { color: var(--accent2); }
+  .header-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hstat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; padding: 5px 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface); color: var(--muted);
+  }
+  .hstat b { color: var(--text); }
+
+  /* ── MAIN ── */
+  main { flex: 1; padding: 20px 20px 40px; max-width: 720px; margin: 0 auto; width: 100%; }
+
+  /* domain pills */
+  .domain-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; scrollbar-width: none; }
+  .domain-scroll::-webkit-scrollbar { display: none; }
+  .dpill {
+    flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 5px 12px;
+    border-radius: 20px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer;
+    transition: all 0.2s; white-space: nowrap; letter-spacing: 0.3px;
+  }
+  .dpill:hover { border-color: var(--accent); color: var(--accent); }
+  .dpill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dpill .cnt { font-family: 'JetBrains Mono', monospace; font-size: 10px; opacity: 0.8; }
+
+  /* mode toggle */
+  .mode-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .mbtn {
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600;
+    padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.2s;
+  }
+  .mbtn.active { background: var(--surface2); border-color: var(--accent); color: var(--text); }
+
+  /* progress */
+  .prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .prog-bar { flex: 1; height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.4s ease; }
+  .prog-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  /* ── CARD ── */
+  .card-wrap { perspective: 1200px; margin-bottom: 14px; cursor: pointer; }
+  .card {
+    position: relative; width: 100%; min-height: var(--card-h);
+    transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute; width: 100%; min-height: var(--card-h);
+    backface-visibility: hidden;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 28px 28px 24px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  }
+  .card-face::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: 16px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .card-back { transform: rotateY(180deg); background: var(--surface2); }
+  .card-back::before { background: linear-gradient(135deg, rgba(6,182,212,0.07) 0%, transparent 60%); }
+
+  .ctag {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 4px; margin-bottom: 14px; border: 1px solid;
+  }
+  .card-q { font-size: 17px; font-weight: 600; line-height: 1.5; color: var(--text); margin-bottom: 12px; }
+  .card-a { font-size: 15px; font-weight: 500; line-height: 1.65; color: #cbd5e1; }
+  .card-hint {
+    margin-top: 14px; font-size: 12px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace; line-height: 1.5;
+    border-top: 1px solid var(--border); padding-top: 12px; width: 100%;
+  }
+  .flip-hint { font-size: 12px; color: var(--muted); margin-top: 14px; }
+
+  /* quiz options */
+  .quiz-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: 16px; }
+  .qopt {
+    padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: #94a3b8; font-size: 13px; font-weight: 500;
+    cursor: pointer; text-align: left; line-height: 1.4; transition: all 0.15s;
+    font-family: 'Syne', sans-serif;
+  }
+  .qopt:hover:not(:disabled) { border-color: var(--accent); color: var(--text); background: rgba(59,130,246,0.1); }
+  .qopt.correct { background: rgba(16,185,129,0.15); border-color: var(--green); color: #6ee7b7; }
+  .qopt.wrong { background: rgba(239,68,68,0.12); border-color: var(--red); color: #fca5a5; }
+
+  /* controls */
+  .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .cbtn {
+    padding: 12px 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.18s; font-family: 'Syne', sans-serif; letter-spacing: 0.2px;
+  }
+  .cbtn:active { transform: scale(0.97); }
+  .cbtn-wrong { border-color: rgba(239,68,68,0.3); color: #f87171; background: rgba(239,68,68,0.08); }
+  .cbtn-wrong:hover { background: rgba(239,68,68,0.15); border-color: var(--red); }
+  .cbtn-right { border-color: rgba(16,185,129,0.3); color: #34d399; background: rgba(16,185,129,0.08); }
+  .cbtn-right:hover { background: rgba(16,185,129,0.15); border-color: var(--green); }
+  .cbtn-skip:hover { background: var(--surface2); color: var(--text); }
+
+  /* summary */
+  .summary {
+    border-radius: 16px; border: 1px solid var(--border);
+    background: var(--surface); padding: 36px 24px; text-align: center;
+  }
+  .sum-emoji { font-size: 48px; margin-bottom: 12px; }
+  .sum-pct { font-size: 72px; font-weight: 800; letter-spacing: -3px; line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 6px;
+  }
+  .sum-label { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .sum-breakdown { display: flex; gap: 24px; justify-content: center; margin-bottom: 28px; }
+  .sum-stat { font-size: 13px; color: var(--muted); }
+  .sum-stat b { display: block; font-size: 28px; font-weight: 700; margin-bottom: 2px; }
+  .sum-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .sum-btn {
+    padding: 11px 22px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: 'Syne', sans-serif; transition: all 0.2s;
+  }
+  .sum-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sum-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sum-btn.primary:hover { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+  /* domain tag colors */
+  .tag-Identity { color: #a78bfa; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.08); }
+  .tag-Governance { color: #34d399; border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.08); }
+  .tag-Storage { color: #60a5fa; border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.08); }
+  .tag-Compute { color: #fb923c; border-color: rgba(251,146,60,0.3); background: rgba(251,146,60,0.08); }
+  .tag-Networking { color: #f472b6; border-color: rgba(244,114,182,0.3); background: rgba(244,114,182,0.08); }
+  .tag-Monitoring { color: #facc15; border-color: rgba(250,204,21,0.3); background: rgba(250,204,21,0.08); }
+
+  /* mobile tweaks */
+  @media (max-width: 480px) {
+    :root { --card-h: 260px; }
+    main { padding: 16px 14px 40px; }
+    .card-q { font-size: 15px; }
+    .quiz-opts { grid-template-columns: 1fr; }
+    .controls { gap: 8px; }
+    .cbtn { font-size: 12px; padding: 10px 6px; }
+    .sum-pct { font-size: 56px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">AZ</div>
+      <div class="logo-text">AZ<span>-104</span> Study</div>
+    </div>
+    <div class="header-stats">
+      <div class="hstat">Card <b id="hcard">1</b>/<b id="htotal">110</b></div>
+      <div class="hstat">Score <b id="hscore">0/0</b></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="domain-scroll" id="domain-bar"></div>
+    <div class="mode-row">
+      <button class="mbtn active" id="mode-flash" onclick="setMode('flash')">Flashcards</button>
+      <button class="mbtn" id="mode-quiz" onclick="setMode('quiz')">Quiz Mode</button>
+    </div>
+    <div class="prog-row">
+      <div class="prog-bar"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+      <div class="prog-label" id="prog-label">0%</div>
+    </div>
+
+    <div class="card-wrap" id="card-wrap">
+      <div class="card" id="card" onclick="flipCard()">
+        <div class="card-face card-front">
+          <div class="ctag" id="front-tag"></div>
+          <div class="card-q" id="front-q"></div>
+          <div class="flip-hint" id="flip-hint">Tap to reveal answer</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="ctag" id="back-tag"></div>
+          <div class="card-a" id="back-a"></div>
+          <div class="card-hint" id="back-hint"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="cbtn cbtn-wrong" onclick="grade(false)">✗ Missed it</button>
+      <button class="cbtn cbtn-skip" onclick="nextCard()">→ Skip</button>
+      <button class="cbtn cbtn-right" onclick="grade(true)">✓ Got it</button>
+    </div>
+
+    <div id="summary" style="display:none;"></div>
+  </main>
+</div>
+
+<script>
+const cards = [
+  // IDENTITY (20)
+  {domain:"Identity",q:"What is the maximum number of custom domains you can add to a single Azure AD tenant?",a:"900 custom domains per tenant.",hint:"Default domain is <tenant>.onmicrosoft.com and cannot be removed.",opts:["5","50","900","Unlimited"]},
+  {domain:"Identity",q:"What are the three Azure AD device join types?",a:"Azure AD Registered, Azure AD Joined, and Hybrid Azure AD Joined.",hint:"BYOD = Registered; corp Windows 10 = Joined; on-prem + cloud = Hybrid.",opts:["Registered, Joined, Hybrid Joined","Linked, Synced, Managed","Enrolled, Joined, Federated","Basic, Standard, Premium"]},
+  {domain:"Identity",q:"What is the default maximum lifetime of an Azure AD access token?",a:"1 hour (60 minutes).",hint:"Refresh tokens last up to 90 days for persistent sessions.",opts:["15 minutes","1 hour","8 hours","24 hours"]},
+  {domain:"Identity",q:"What Azure AD feature provides just-in-time privileged access with approval workflows?",a:"Azure AD Privileged Identity Management (PIM).",hint:"Requires Azure AD P2 license.",opts:["MFA Server","SSPR","Conditional Access","PIM"]},
+  {domain:"Identity",q:"What is the Global Administrator role in Azure AD?",a:"The most privileged built-in Azure AD role — can manage all aspects of Azure AD.",hint:"Should be limited to fewer than 5 accounts per tenant.",opts:["Manages Azure subscriptions only","Most privileged Azure AD role","Same as Owner at subscription scope","Manages MFA only"]},
+  {domain:"Identity",q:"What is Azure AD Self-Service Password Reset (SSPR)?",a:"A feature that lets users reset their own passwords without IT help desk involvement, using pre-registered authentication methods.",hint:"Requires Azure AD P1 or P2 for on-prem writeback.",opts:["Automatic password rotation","User-driven password reset without helpdesk","Admin-only password reset tool","SSO configuration feature"]},
+  {domain:"Identity",q:"What is the difference between Azure AD B2B and B2C?",a:"B2B lets external partners access your apps using their own identities. B2C is a customer identity platform for consumer-facing apps.",hint:"B2B = partner collaboration; B2C = customer apps.",opts:["They are identical","B2B = partner access; B2C = consumer identity platform","B2C = partner access; B2B = consumer","Both require Azure AD P2"]},
+  {domain:"Identity",q:"What Azure AD feature enforces conditions like compliant device or MFA before granting access?",a:"Conditional Access policies.",hint:"Requires Azure AD P1 or P2.",opts:["Identity Protection","PIM","Conditional Access","Named Locations"]},
+  {domain:"Identity",q:"What is Azure AD Connect and what does it do?",a:"Azure AD Connect syncs on-premises Active Directory identities to Azure AD, enabling hybrid identity.",hint:"Supports password hash sync, pass-through auth, and federation.",opts:["VPN between on-prem and Azure","On-prem AD to Azure AD identity sync tool","A firewall rule manager","An MFA server"]},
+  {domain:"Identity",q:"What are the three Azure AD Connect authentication methods?",a:"Password Hash Synchronization (PHS), Pass-Through Authentication (PTA), and Federation (AD FS).",hint:"PHS is simplest; PTA keeps auth on-prem; Federation uses ADFS.",opts:["Sync, Federate, Bridge","PHS, PTA, Federation","Basic, Standard, Premium","Kerberos, NTLM, SAML"]},
+  {domain:"Identity",q:"What is an Azure AD Administrative Unit?",a:"A container within Azure AD that restricts admin permissions to a subset of users, groups, or devices.",hint:"Useful for delegating admin rights per region or department.",opts:["A subscription management container","A scoped admin delegation container","A resource group for identities","An MFA policy container"]},
+  {domain:"Identity",q:"What is Azure AD Identity Protection?",a:"A risk-based feature that detects risky users and sign-ins, and can automatically enforce MFA or block access.",hint:"Requires Azure AD P2.",opts:["A firewall for Azure AD","Risk-based detection and auto-remediation for sign-ins","A password manager","A device compliance tool"]},
+  {domain:"Identity",q:"What does the User Administrator role allow in Azure AD?",a:"Manage users and groups including resetting passwords for non-admins, managing licenses, creating/deleting users — but NOT managing privileged admin accounts.",hint:"Cannot reset passwords for Global Admins.",opts:["Full access to Azure AD","Manage users/groups but not privileged admin accounts","Read-only user access","Manage MFA settings only"]},
+  {domain:"Identity",q:"What is the purpose of Azure AD Named Locations in Conditional Access?",a:"Named Locations define trusted IP ranges or countries for Conditional Access policies to allow or block access based on sign-in location.",hint:"Can be used to require MFA only when outside the corporate network.",opts:["DNS location resolution","Trusted IP/country definitions for Conditional Access","Physical datacenter locations","VPN endpoint configuration"]},
+  {domain:"Identity",q:"What license is required for Azure AD Conditional Access?",a:"Azure AD Premium P1 (or P2, which includes P1 features).",hint:"P2 adds Identity Protection and PIM on top of P1.",opts:["Azure AD Free","Azure AD Premium P1","Microsoft 365 E3 only","No license required"]},
+  {domain:"Identity",q:"What is a managed identity in Azure?",a:"An Azure AD identity automatically managed by Azure for a service/resource, eliminating the need to store credentials in code.",hint:"Two types: System-assigned (tied to resource lifecycle) and User-assigned (standalone, reusable).",opts:["A service account stored in Key Vault","An auto-managed Azure AD identity for Azure resources","A VPN gateway identity","A DNS identity"]},
+  {domain:"Identity",q:"What is the difference between system-assigned and user-assigned managed identities?",a:"System-assigned is tied to one resource and deleted with it. User-assigned is independent and can be shared across multiple resources.",hint:"User-assigned identity persists even if the associated resource is deleted.",opts:["They are identical","System-assigned = one resource/auto-deleted; User-assigned = independent/reusable","User-assigned is tied to one resource","System-assigned can be shared"]},
+  {domain:"Identity",q:"What is Azure AD group-based licensing?",a:"Assign Azure licenses to a group so all members automatically receive those licenses.",hint:"Requires Azure AD P1 license to use group-based licensing.",opts:["Manual license assignment per user","Assign licenses to a group so all members inherit them","Automatic license purchase","A bulk export of licenses"]},
+  {domain:"Identity",q:"What is a service principal in Azure AD?",a:"The identity of an application or service within Azure AD — used for authentication and authorization.",hint:"App registration = global definition; Service principal = per-tenant instance.",opts:["A human user account","An app/service identity in Azure AD for auth and RBAC","A managed device identity","A subscription-level identity"]},
+  {domain:"Identity",q:"What is the default user permissions model in Azure AD?",a:"By default, all users can register applications, invite guests, and read most directory objects. Admins can restrict these defaults.",hint:"Guest users have more restricted defaults than member users.",opts:["Users have no permissions by default","Users can read directory, register apps, and invite guests by default","Users can create subscriptions","Users have full admin access"]},
+
+  // GOVERNANCE (15)
+  {domain:"Governance",q:"What is the Azure scope hierarchy from broadest to narrowest?",a:"Management Group → Subscription → Resource Group → Resource.",hint:"Policies and RBAC at higher scopes inherit downward.",opts:["Resource → RG → Sub → Tenant","Sub → RG → Resource → MG","Management Group → Subscription → RG → Resource","Tenant → Resource → Sub → RG"]},
+  {domain:"Governance",q:"What does Azure Policy do differently from RBAC?",a:"Azure Policy enforces resource property rules and compliance state. RBAC controls who can perform actions. Policy = what; RBAC = who.",hint:"They are complementary — use both together.",opts:["Policy manages users; RBAC manages resources","Policy enforces resource rules; RBAC controls who can act","They are the same","Policy requires P1; RBAC is free"]},
+  {domain:"Governance",q:"What is the difference between resource lock CanNotDelete and ReadOnly?",a:"CanNotDelete allows read/modify but blocks deletion. ReadOnly allows only reads — no writes or deletes.",hint:"Locks override RBAC — even Owners are blocked.",opts:["They are identical","CanNotDelete blocks deletes; ReadOnly blocks all writes and deletes","ReadOnly allows writes","CanNotDelete is subscription-level only"]},
+  {domain:"Governance",q:"Do resource group tags inherit to resources inside them?",a:"No. Tags are NOT inherited. You must tag resources explicitly or use Azure Policy to enforce inheritance.",hint:"Use the 'Inherit a tag from the resource group' built-in policy.",opts:["Yes, always","No — set explicitly or enforce with Policy","Only for built-in tags","Only for resources created after the tag"]},
+  {domain:"Governance",q:"What is an Azure Management Group?",a:"A container above subscriptions for applying governance (policies, RBAC, budgets) across multiple subscriptions at once.",hint:"Up to 6 levels of MG hierarchy; root MG contains all subscriptions.",opts:["A group of resource groups","A container above subscriptions for cross-sub governance","An Azure AD group","A billing account container"]},
+  {domain:"Governance",q:"What is an Azure Blueprint?",a:"A repeatable governed package of artifacts (ARM templates, policies, RBAC, resource groups) for deploying compliant environments.",hint:"Blueprints maintain a live assignment link; ARM templates do not.",opts:["A diagramming tool","A repeatable governed environment package","A cost analysis report","A backup policy"]},
+  {domain:"Governance",q:"What Azure Policy effect denies a non-compliant resource deployment?",a:"The Deny effect blocks a non-compliant resource from being created or modified.",hint:"Other effects: Audit, AuditIfNotExists, DeployIfNotExists, Modify, Append, Disabled.",opts:["Audit","Deny","Append","DeployIfNotExists"]},
+  {domain:"Governance",q:"What is the purpose of Azure Cost Management + Billing?",a:"It provides visibility into Azure spending, forecasts, budgets, and cost allocation across subscriptions and resource groups.",hint:"Budgets can trigger alerts or action groups when thresholds are hit.",opts:["It shuts down resources over budget","Spending visibility, budgets, and cost alerts","It negotiates reserved instance pricing","It bills third-party services"]},
+  {domain:"Governance",q:"What is the difference between an Azure initiative (policy set) and a single policy?",a:"An initiative is a collection of policy definitions grouped together for a larger compliance goal. A single policy is one rule.",hint:"Example: 'Enable Azure Monitor for VMs' bundles multiple policies.",opts:["They are identical","Initiative = grouped policy set; single policy = one rule","Initiative requires P2 license","Single policies can't be assigned at MG scope"]},
+  {domain:"Governance",q:"What is Azure Advisor?",a:"A free personalized recommendation service that analyzes your Azure usage and suggests improvements for reliability, security, performance, cost, and operational excellence.",hint:"Advisor integrates with Security Center and Cost Management.",opts:["A chatbot for Azure support","A personalized recommendation engine for Azure best practices","A ticketing system","An auto-remediation engine"]},
+  {domain:"Governance",q:"What is the maximum number of tags on a single Azure resource?",a:"50 tags per resource or resource group.",hint:"Tag name limit = 512 characters; tag value limit = 256 characters.",opts:["10","25","50","100"]},
+  {domain:"Governance",q:"What RBAC role grants full resource access but cannot assign roles to others?",a:"Contributor — full resource management but cannot assign RBAC roles. Owner CAN assign roles.",hint:"The question describes Contributor. Owner can delegate.",opts:["Reader","Contributor","Owner","User Access Administrator"]},
+  {domain:"Governance",q:"What is the purpose of the User Access Administrator RBAC role?",a:"It allows managing user access to Azure resources (assigning/removing roles) without any other resource management rights.",hint:"Minimal-privilege way to delegate role assignments.",opts:["Full resource management","Assign and remove role assignments only","Read all resources","Manage Azure AD users"]},
+  {domain:"Governance",q:"Where can Azure RBAC role assignments be scoped?",a:"Management Group, Subscription, Resource Group, or individual Resource.",hint:"Assignments at broader scopes inherit downward.",opts:["Resource only","Subscription and RG only","MG, Subscription, RG, or Resource","Azure AD tenant only"]},
+  {domain:"Governance",q:"What is Azure Policy's 'DeployIfNotExists' effect?",a:"If a compliant resource lacks a required associated resource (e.g., a diagnostic setting), Azure Policy automatically deploys the missing resource.",hint:"Requires a managed identity on the policy assignment to perform the deployment.",opts:["Blocks non-compliant resources","Logs non-compliance only","Auto-deploys missing required resources","Modifies existing resource properties"]},
+
+  // STORAGE (18)
+  {domain:"Storage",q:"What are the four Azure Blob storage access tiers?",a:"Hot, Cool, Cold, and Archive.",hint:"Archive has lowest cost but highest rehydration latency (hours).",opts:["Hot, Warm, Cold, Frozen","Hot, Cool, Cold, Archive","Standard, Premium, Archive, Offline","Tier 1–4"]},
+  {domain:"Storage",q:"What is the minimum retention period for the Cool blob tier?",a:"30 days. Data deleted before 30 days incurs an early deletion charge.",hint:"Cold = 90 days, Archive = 180 days minimum retention.",opts:["No minimum","7 days","30 days","90 days"]},
+  {domain:"Storage",q:"What Azure Storage redundancy replicates synchronously across 3 availability zones in the primary region?",a:"Zone-Redundant Storage (ZRS).",hint:"ZRS protects against datacenter failure; add GRS for secondary region.",opts:["LRS","GRS","ZRS","GZRS"]},
+  {domain:"Storage",q:"What is a Shared Access Signature (SAS) in Azure Storage?",a:"A SAS grants limited, time-bound, URI-based access to specific storage resources without sharing the account key.",hint:"Three types: Account SAS, Service SAS, User Delegation SAS (most secure).",opts:["Encrypts data at rest","Enables geo-replication","Grants limited URI-based access without sharing keys","Configures CORS rules"]},
+  {domain:"Storage",q:"Which Azure storage service supports SMB and NFS protocol access?",a:"Azure Files.",hint:"Azure Files supports SMB 3.x and NFS 4.1.",opts:["Azure Blob","Azure Queue","Azure Files","Azure Table"]},
+  {domain:"Storage",q:"What is the difference between LRS and GRS?",a:"LRS replicates 3 times within a single datacenter. GRS replicates locally (LRS) PLUS asynchronously to a paired secondary region.",hint:"GRS RPO is typically under 15 minutes but not guaranteed.",opts:["LRS = 3 zones; GRS = 3 regions","LRS = 1 datacenter 3x; GRS = primary LRS + async secondary","LRS = premium; GRS = standard","They are identical"]},
+  {domain:"Storage",q:"What is Azure Blob lifecycle management?",a:"A policy-based feature that automatically transitions blobs between access tiers or deletes them based on age or last-access time rules.",hint:"Example: move to Cool after 30 days, Archive after 90, delete after 365.",opts:["Manual tier management","Policy-based auto-tiering and deletion of blobs","A disaster recovery feature","A backup feature"]},
+  {domain:"Storage",q:"What is the purpose of Azure Storage soft delete?",a:"Soft delete retains deleted blobs/containers/file shares for a configurable retention period (1–365 days) so they can be recovered.",hint:"Must be enabled before deletion — it won't recover items deleted before enabling.",opts:["Encrypts deleted data","Retains deleted items for recovery during a configurable window","Auto-backs up to secondary region","Deletes blobs on a schedule"]},
+  {domain:"Storage",q:"What are the two performance tiers of Azure Storage accounts?",a:"Standard (HDD-backed, general purpose) and Premium (SSD-backed, low latency for specific services).",hint:"Premium accounts are service-specific — a Premium Block Blob account cannot host file shares.",opts:["Basic and Standard","Standard (HDD) and Premium (SSD)","Hot and Cold","Free and Paid"]},
+  {domain:"Storage",q:"What is Azure Data Box?",a:"A ruggedized physical appliance Microsoft ships to you for offline bulk data transfer to Azure — from 8 TB (Data Box Disk) to 800 TB (Data Box Heavy).",hint:"Used when network transfer would take more than a week.",opts:["A cloud storage service","A physical device for offline bulk data transfer to Azure","A database service","A network accelerator"]},
+  {domain:"Storage",q:"What is AzCopy and when would you use it?",a:"AzCopy is a command-line tool for copying data to/from Azure Blob, File, and Table storage — ideal for scripted or bulk transfers.",hint:"Supports parallel transfers; can be used in scripts/pipelines.",opts:["A GUI tool for managing storage","A CLI tool for bulk data copy to/from Azure Storage","A storage monitoring tool","A storage encryption tool"]},
+  {domain:"Storage",q:"What is the purpose of Azure Storage firewall and VNet rules?",a:"They restrict access to a storage account to specific virtual networks, subnets, or IP ranges, preventing public internet access.",hint:"Use service endpoints or private endpoints to allow VNet access.",opts:["Encrypt data in transit","Restrict storage access by network origin","Enable geo-replication","Configure CORS"]},
+  {domain:"Storage",q:"What is an immutable blob storage policy?",a:"A WORM (Write Once, Read Many) policy that prevents blobs from being modified or deleted for a retention period — used for compliance.",hint:"Two types: time-based retention policies and legal hold policies.",opts:["A read-only snapshot","A WORM compliance policy preventing modification/deletion","An encryption policy","A lifecycle rule"]},
+  {domain:"Storage",q:"What is Azure Storage versioning?",a:"Blob versioning automatically maintains previous versions of a blob when it is overwritten or deleted, enabling point-in-time recovery.",hint:"Versioning is automatic; snapshots are manual.",opts:["Tracks API version changes","Automatically preserves previous blob versions","Manages SDK versions","Enables geo-replication"]},
+  {domain:"Storage",q:"What is the replication pattern for GZRS?",a:"Geo-Zone-Redundant Storage replicates synchronously across 3 availability zones in the primary region (ZRS) and asynchronously to a secondary region (GRS).",hint:"GZRS is the most durable option, combining ZRS and GRS.",opts:["3 zones, no secondary","Primary LRS + secondary ZRS","Primary ZRS + secondary async LRS","LRS + 2 additional regions"]},
+  {domain:"Storage",q:"What is the maximum size of a single block blob in Azure Storage?",a:"Approximately 190.7 TiB (~200 TB) using block blobs with up to 50,000 blocks of 4,000 MiB each.",hint:"Page blobs max at 8 TiB; append blobs max at ~195 GiB.",opts:["5 TB","8 TB","190.7 TiB (~200 TB)","Unlimited"]},
+  {domain:"Storage",q:"What happens to a storage account's data during failover to the secondary region?",a:"The secondary becomes the new primary. Data since the last sync point may be lost (RPO typically <15 min). The account temporarily becomes LRS.",hint:"After failover, you must manually re-enable geo-replication.",opts:["No data loss guaranteed","Data since last sync may be lost; account becomes LRS temporarily","All data preserved; stays GRS","Failover not possible for storage"]},
+
+  // COMPUTE (20)
+  {domain:"Compute",q:"What is the difference between a VM Scale Set and an Availability Set?",a:"VM Scale Sets auto-scale a group of identical VMs and can span zones. Availability Sets spread VMs across fault and update domains for HA without auto-scaling.",hint:"VMSS = scalable workloads; Availability Sets = fixed HA groups.",opts:["They are the same","VMSS auto-scales identicals; Availability Set distributes for HA","Availability Set auto-scales","VMSS is Linux-only"]},
+  {domain:"Compute",q:"What are fault domains and update domains in an Availability Set?",a:"Fault domains share power and network hardware (protect against rack failure). Update domains are rebooted together during planned maintenance.",hint:"Default: up to 3 fault domains, 5 update domains.",opts:["Both protect against hardware failure","FD = planned maintenance; UD = hardware failure","FD = shared power/network; UD = maintenance reboots","They are the same"]},
+  {domain:"Compute",q:"What is the Azure VM SLA for a single VM with Premium SSD?",a:"99.9% uptime SLA.",hint:"Two VMs in Availability Set = 99.95%; across Availability Zones = 99.99%.",opts:["99.5%","99.9%","99.95%","99.99%"]},
+  {domain:"Compute",q:"What does Azure Spot VM offer vs a regular VM?",a:"Spot VMs use unused Azure capacity at up to 90% discount but can be evicted with 30 seconds notice when Azure needs the capacity back.",hint:"Not suitable for workloads that cannot tolerate interruption.",opts:["Higher performance","Up to 90% discount with eviction risk","Guaranteed SLA","Reserved capacity"]},
+  {domain:"Compute",q:"What are the three Azure Reserved VM Instance payment options?",a:"Pay upfront (largest discount), monthly payments (same total cost), or no upfront (smaller discount).",hint:"Reserved Instances commit to 1 or 3 years; save up to 72% vs pay-as-you-go.",opts:["Hourly, Daily, Monthly","Upfront, Monthly, No Upfront","Standard, Dev/Test, Reserved","Basic, Standard, Premium"]},
+  {domain:"Compute",q:"What is Azure Dedicated Host?",a:"Physical servers dedicated to your organization that host Azure VMs, providing hardware isolation and control over maintenance windows.",hint:"Required for some compliance scenarios; more expensive than shared infrastructure.",opts:["A VM with no neighbors","A physical server dedicated to one customer's VMs","A special VM SKU","A private datacenter"]},
+  {domain:"Compute",q:"What is the purpose of VM Extensions in Azure?",a:"VM Extensions are small agents/scripts that run post-deployment configuration tasks on VMs — like installing software or configuring monitoring.",hint:"Custom Script Extension is most common; others include OMS Agent, DSC, Antimalware.",opts:["Add more disk to a VM","Post-deployment config agents/scripts for VMs","Resize VMs automatically","Encrypt VM disks"]},
+  {domain:"Compute",q:"What is Azure Disk Encryption (ADE)?",a:"ADE encrypts VM OS and data disks using BitLocker (Windows) or DM-Crypt (Linux), with keys managed in Azure Key Vault.",hint:"Different from Storage Service Encryption (SSE), which encrypts at the storage layer.",opts:["Encrypts network traffic","Encrypts VM disks using BitLocker/DM-Crypt with keys in Key Vault","Encrypts blobs only","A firewall for VMs"]},
+  {domain:"Compute",q:"What is the difference between Azure VM 'Stop' and 'Stop (Deallocate)'?",a:"Stop keeps the VM allocated — you still pay for compute. Stop (Deallocate) releases compute resources so you stop paying for compute.",hint:"Deallocated VMs may get a new public IP if not using a static IP.",opts:["They are identical","Stop = still billed; Deallocate = compute released, no compute charge","Deallocate deletes the VM","Stop deletes the disk"]},
+  {domain:"Compute",q:"What is Azure Bastion and why use it?",a:"Azure Bastion provides secure RDP/SSH access to VMs through the Azure portal over TLS, without exposing VMs via port 3389 or 22.",hint:"Eliminates need for jump boxes and public IPs on VMs.",opts:["A VPN service","Secure RDP/SSH via portal without public IP/open ports","A firewall service","A load balancer"]},
+  {domain:"Compute",q:"What VM disk type offers the highest performance in Azure?",a:"Ultra Disk — provides sub-millisecond latency, up to 160,000 IOPS and 2,000 MB/s throughput per disk.",hint:"Ultra Disk requires a compatible VM size and is available in specific regions/zones.",opts:["Standard HDD","Standard SSD","Premium SSD","Ultra Disk"]},
+  {domain:"Compute",q:"What is the Azure Compute Gallery (formerly Shared Image Gallery)?",a:"A service for storing, managing, and sharing custom VM images across regions, subscriptions, and tenants with versioning support.",hint:"Supports replication to multiple regions.",opts:["A marketplace for VM templates","A service for storing/sharing custom VM images across regions","A VM backup vault","An image scanning service"]},
+  {domain:"Compute",q:"What is a proximity placement group?",a:"A proximity placement group ensures Azure VMs are physically located close together in the same datacenter to minimize network latency.",hint:"Useful for high-performance computing and tightly coupled workloads.",opts:["A VNet peering type","A logical group for billing","A constraint keeping VMs physically close to minimize latency","A load balancing group"]},
+  {domain:"Compute",q:"What does Azure VM 'generalize' mean and when is it required?",a:"Generalizing removes machine-specific configuration (hostname, SIDs, user accounts) using Sysprep (Windows) or waagent (Linux) so an image can be deployed as multiple VMs.",hint:"A generalized VM cannot be restarted — only used as an image source.",opts:["Resizing a VM","Removing machine-specific info so an image can deploy multiple VMs","Converting to managed disk","Encrypting a VM"]},
+  {domain:"Compute",q:"What is the purpose of Azure App Service Plan?",a:"An App Service Plan defines the compute resources (VM size, region, OS, tier) that host Azure App Service web apps. Multiple apps can share one plan.",hint:"Higher tiers unlock autoscaling, custom domains, SSL, and deployment slots.",opts:["A billing plan for App Service","The underlying compute/region/tier hosting App Service apps","A network policy","A backup schedule"]},
+  {domain:"Compute",q:"What Azure service lets you run containers without managing any infrastructure?",a:"Azure Container Instances (ACI) — runs containers on demand with per-second billing and no VM management.",hint:"For orchestrated, long-running containers use Azure Kubernetes Service (AKS).",opts:["Azure VM","Azure Container Instances (ACI)","Azure Batch","Azure Functions"]},
+  {domain:"Compute",q:"What is Azure Kubernetes Service (AKS)?",a:"A managed Kubernetes service where Azure handles the control plane; you manage and pay only for agent (worker) nodes.",hint:"AKS integrates with Azure AD, ACR, Monitor, and Azure CNI networking.",opts:["A managed VM cluster","A managed Kubernetes service — Azure manages the control plane","A serverless container runtime","A Docker registry"]},
+  {domain:"Compute",q:"What is Azure Functions and its pricing model?",a:"Azure Functions is serverless compute that runs event-driven code. The Consumption plan bills per execution and execution time with a free monthly grant.",hint:"Premium plan supports VNet integration; Dedicated plan uses App Service Plan.",opts:["A VM that runs scripts","Serverless event-driven compute with per-execution billing","A container service","A managed Kubernetes service"]},
+  {domain:"Compute",q:"What is Azure Batch?",a:"Azure Batch manages large-scale parallel and HPC workloads by automatically provisioning, scheduling, and scaling compute nodes.",hint:"Ideal for rendering, simulations, and data processing jobs.",opts:["Batch billing of Azure services","Large-scale parallel HPC workload management","A container orchestrator","A serverless function service"]},
+  {domain:"Compute",q:"What is an Azure VM's ephemeral OS disk?",a:"An ephemeral OS disk stores the OS on local VM cache or temp storage — lower latency, no storage cost — but data is lost on deallocate/redeploy.",hint:"Supported only on certain VM sizes with sufficient local cache.",opts:["A disk that auto-deletes after 7 days","OS disk on local VM cache — lower latency but non-persistent","A disk in Archive tier","A read-only OS disk"]},
+
+  // NETWORKING (22)
+  {domain:"Networking",q:"Can you change a VNet's address space after creation?",a:"You can add new address space ranges to a VNet, but you cannot remove or shrink address spaces that are in use by subnets.",hint:"Plan address space carefully upfront; avoid overlapping with on-prem or peered VNets.",opts:["No changes allowed after creation","Add address spaces; cannot remove in-use ones","Free resize at any time","VNets don't use CIDR"]},
+  {domain:"Networking",q:"What is the purpose of a Network Security Group (NSG)?",a:"An NSG filters inbound and outbound network traffic using rules based on source/destination IP, port, and protocol — applied to subnets or NICs.",hint:"Lower priority number = higher precedence. Default rules allow VNet and Azure LB traffic.",opts:["DDoS protection","Routes traffic between VNets","Traffic filtering via rules on subnets or NICs","DNS resolution"]},
+  {domain:"Networking",q:"What is VNet peering and is it transitive?",a:"VNet peering connects two VNets over the Azure backbone with low latency. It is NOT transitive — A peers with B and B with C does NOT mean A can reach C.",hint:"Use Azure Virtual WAN or hub VNet with UDRs for transitive routing.",opts:["A VPN over the internet","Azure backbone connection between VNets — NOT transitive","Encrypted tunnel between VNets","Transitive by default"]},
+  {domain:"Networking",q:"What is a User Defined Route (UDR)?",a:"A UDR overrides Azure's default routing to force traffic through a specific next hop (e.g., a firewall NVA, VPN Gateway, or another VM).",hint:"Applied to subnets via route tables; 0.0.0.0/0 UDR forces all internet traffic through a specified next hop.",opts:["A built-in Azure route","A custom route overriding Azure defaults to force traffic through a next hop","A DNS record","A peering route"]},
+  {domain:"Networking",q:"What is the difference between Azure Load Balancer and Azure Application Gateway?",a:"Load Balancer is Layer 4 (TCP/UDP). Application Gateway is Layer 7 (HTTP/HTTPS) with URL routing, SSL termination, WAF, and session affinity.",hint:"For HTTP apps use Application Gateway; for any TCP/UDP use Load Balancer.",opts:["They are identical","LB = Layer 4 TCP/UDP; App Gateway = Layer 7 HTTP with WAF/routing","App Gateway is faster","LB supports SSL termination"]},
+  {domain:"Networking",q:"What is Azure Traffic Manager?",a:"A DNS-based global traffic routing service that distributes traffic across Azure regions using methods like Priority, Weighted, Performance, and Geographic.",hint:"Traffic Manager works at DNS level — no data plane traffic passes through it.",opts:["A Layer 4 load balancer","A DNS-based global traffic distributor across regions","A WAF service","An on-prem traffic router"]},
+  {domain:"Networking",q:"What is Azure Front Door?",a:"A global Layer 7 load balancer and CDN with built-in WAF, SSL offload, URL routing, and anycast for low-latency global HTTP(S) delivery.",hint:"Front Door is similar to Application Gateway but operates globally, not per-region.",opts:["A VPN service","A global Layer 7 HTTP load balancer with CDN and WAF","A DNS service","A storage CDN only"]},
+  {domain:"Networking",q:"What is Azure Firewall?",a:"A managed, cloud-native stateful firewall-as-a-service with high availability, unlimited scalability, FQDN filtering, network/application rules, and threat intelligence.",hint:"Deploy in a hub VNet and route spoke traffic through it using UDRs.",opts:["An NSG with more features","A managed stateful firewall-as-a-service with FQDN and threat intelligence","A WAF for web apps","A DDoS mitigation service"]},
+  {domain:"Networking",q:"What is Azure DDoS Protection Standard?",a:"Enhanced DDoS mitigation with adaptive tuning, attack telemetry, rapid response support, and SLA-backed cost protection.",hint:"Basic DDoS protection is free for all Azure resources; Standard adds advanced mitigation.",opts:["Included free for all resources","Enhanced adaptive DDoS mitigation with telemetry and cost protection","A firewall add-on","A WAF feature"]},
+  {domain:"Networking",q:"What is a private endpoint in Azure?",a:"A private endpoint gives an Azure service (like Storage or SQL) a private IP address inside your VNet, so traffic never traverses the public internet.",hint:"Backed by Azure Private Link. Different from service endpoints.",opts:["A public IP for Azure services","A private IP in your VNet for an Azure service via Private Link","A VPN endpoint","An NSG rule for private traffic"]},
+  {domain:"Networking",q:"What is the difference between a service endpoint and a private endpoint?",a:"Service endpoints route VNet traffic to a service over the Azure backbone but still use the service's public IP. Private endpoints assign a private IP from your VNet to the service.",hint:"Private endpoints are more secure and support on-prem access via VPN/ExpressRoute.",opts:["They are identical","Service endpoint = Azure backbone to public IP; Private endpoint = private IP in VNet","Service endpoints are more secure","Private endpoints are free; service endpoints cost money"]},
+  {domain:"Networking",q:"What is Azure ExpressRoute?",a:"A dedicated private circuit from your on-premises network to Azure through a connectivity provider — does NOT traverse the public internet.",hint:"Circuits can be 50 Mbps to 100 Gbps; supports Global Reach to connect branches via Azure.",opts:["An encrypted VPN over the internet","A dedicated private circuit from on-prem to Azure — no public internet","A site-to-site VPN enhancement","A CDN service"]},
+  {domain:"Networking",q:"What is the difference between Point-to-Site and Site-to-Site VPN?",a:"Point-to-Site (P2S) connects individual client machines to an Azure VNet. Site-to-Site (S2S) connects an entire on-premises network to an Azure VNet via IPsec/IKE.",hint:"P2S = remote workers; S2S = connecting offices/datacenters.",opts:["They are identical","P2S = single client to VNet; S2S = on-prem network to VNet","S2S = single client; P2S = network to network","P2S requires ExpressRoute"]},
+  {domain:"Networking",q:"What is Azure DNS Private Zones?",a:"Private DNS zones provide name resolution for resources within a VNet (and linked VNets) without needing a custom DNS server.",hint:"Link the private zone to VNets; enable auto-registration to auto-add VM DNS records.",opts:["Public domain registration","Custom DNS servers","Private DNS resolution for VNet resources","DDoS protection"]},
+  {domain:"Networking",q:"What is the purpose of Azure Virtual WAN?",a:"A networking service that provides optimized, automated branch-to-branch and branch-to-Azure connectivity with built-in routing, VPN, and ExpressRoute hubs.",hint:"Simplifies hub-spoke networking at scale.",opts:["A VPN client","A networking service for global optimized branch/cloud connectivity","A CDN service","A load balancer"]},
+  {domain:"Networking",q:"What five pieces of information does an NSG rule require?",a:"Priority (100–4096), Source, Source Port, Destination, Destination Port, and Protocol (TCP/UDP/ICMP/Any).",hint:"Lower priority number wins. Default rules have priority 65000+.",opts:["Name, IP, port, action","Priority, Source, Source Port, Destination, Destination Port, Protocol","IP, subnet, VNet, direction, action","Port, protocol, action, VNet, resource"]},
+  {domain:"Networking",q:"What is an Application Security Group (ASG)?",a:"An ASG lets you group VMs logically (like 'WebServers' or 'DBServers') and use those groups in NSG rules instead of individual IPs.",hint:"ASGs simplify NSG management and reduce rule updates when IPs change.",opts:["A security policy for App Service","A logical VM grouping used in NSG rules instead of IPs","An NSG at the application layer","A WAF group"]},
+  {domain:"Networking",q:"What is the default outbound internet behavior for a VM with no public IP and no NAT Gateway?",a:"Azure provides outbound connectivity via default SNAT using a shared Azure public IP — unreliable for production with no inbound path.",hint:"Use NAT Gateway or Load Balancer for reliable outbound SNAT.",opts:["No outbound connectivity without public IP","Default SNAT via shared Azure IP (not reliable for production)","Always uses VPN for outbound","Outbound requires NSG allow rule"]},
+  {domain:"Networking",q:"What is Azure NAT Gateway?",a:"A fully managed outbound-only NAT service providing a static set of public IPs for outbound connectivity from a subnet, with up to 64,512 SNAT ports per IP.",hint:"Attach to a subnet; VMs in that subnet use NAT Gateway for all outbound internet traffic.",opts:["An inbound load balancer","A managed outbound NAT providing static public IPs for a subnet","A VPN gateway","A DNS service"]},
+  {domain:"Networking",q:"What routing method does Azure use by default within a VNet?",a:"Azure uses system routes that automatically route traffic between subnets within the same VNet, to the internet, and to peered VNets — no configuration required.",hint:"System routes can be overridden with custom UDRs.",opts:["Static routes only","System routes — auto-routing within VNet, internet, and peered VNets","BGP only","Manual configuration required"]},
+  {domain:"Networking",q:"What is the SKU difference between Basic and Standard Azure Public IP addresses?",a:"Basic SKUs are open by default, support dynamic allocation, and have no zone redundancy. Standard SKUs are closed by default, zone-redundant, and required for Standard Load Balancer.",hint:"Always use Standard IPs for new deployments — Basic is being retired.",opts:["No difference","Basic = open/dynamic/no zones; Standard = closed/zone-redundant/required for Standard LB","Standard is free; Basic costs money","Basic supports static IPs; Standard does not"]},
+  {domain:"Networking",q:"What is a Network Virtual Appliance (NVA)?",a:"An NVA is a third-party or custom VM performing network functions (firewall, NAT, WAN optimization) deployed in an Azure VNet.",hint:"Route traffic through an NVA using UDRs. Azure Firewall is Microsoft's managed NVA alternative.",opts:["A managed Azure service","A third-party or custom VM performing network functions in a VNet","A physical appliance shipped by Microsoft","A built-in Azure routing feature"]},
+
+  // MONITORING & BACKUP (15)
+  {domain:"Monitoring",q:"What is the difference between Azure Monitor Metrics and Logs?",a:"Metrics are numeric time-series data (lightweight, 93-day retention, real-time). Logs are structured/free-text data queried with KQL in Log Analytics (longer retention, deeper analysis).",hint:"Metrics feed dashboards/alerts; Logs power complex diagnostic queries.",opts:["They are the same","Metrics = numeric time-series (93 days); Logs = KQL-queryable structured data","Logs are real-time; Metrics need 24h","Metrics require Log Analytics"]},
+  {domain:"Monitoring",q:"What is an Azure Action Group?",a:"An Action Group defines who to notify and what to do (email, SMS, push, webhook, Azure Function, Logic App, ITSM ticket) when an alert fires.",hint:"Multiple alerts can share one Action Group for consistent response.",opts:["A group of monitored VMs","A notification and response definition for alerts","A role assignment scope","A resource tag group"]},
+  {domain:"Monitoring",q:"What is Log Analytics workspace?",a:"A centralized data store for Azure Monitor Logs where you query data using KQL. Resources send diagnostic logs and metrics to a workspace for analysis.",hint:"A single workspace can collect data from multiple subscriptions.",opts:["A VM for log analysis","A centralized KQL-queryable log data store","A metrics dashboard","An alerting engine only"]},
+  {domain:"Monitoring",q:"What is the Azure Activity Log?",a:"The Activity Log records control-plane operations (create, update, delete) on Azure resources — who did what, when, and from where. Retained for 90 days by default.",hint:"Send to Log Analytics or Storage for retention beyond 90 days.",opts:["Application performance metrics","Control-plane operation audit log (create/update/delete) — 90 days default","VM CPU and memory data","A diagnostic setting"]},
+  {domain:"Monitoring",q:"What is a diagnostic setting in Azure Monitor?",a:"A diagnostic setting routes a resource's platform logs and metrics to one or more destinations: Log Analytics workspace, Storage Account, Event Hub, or partner solution.",hint:"Each resource can have up to 5 diagnostic settings.",opts:["A threshold for alerting","A routing rule for resource logs/metrics to Log Analytics, Storage, or Event Hub","An NSG flow log","A VM extension"]},
+  {domain:"Monitoring",q:"What is Azure Application Insights?",a:"An Application Performance Monitoring (APM) service within Azure Monitor that tracks availability, performance, failures, and usage of live web applications.",hint:"Supports .NET, Java, Node.js, Python, and more.",opts:["A log aggregator","APM service tracking app performance, failures, and usage","A VM monitoring agent","A network watcher tool"]},
+  {domain:"Monitoring",q:"What is Azure Network Watcher?",a:"A suite of networking diagnostic and monitoring tools including packet capture, connection troubleshoot, IP flow verify, NSG flow logs, and topology visualization.",hint:"Must be enabled per region; some features require the Network Watcher agent on VMs.",opts:["A network load balancer","A suite of networking diagnostic and monitoring tools","A VPN monitoring service","A CDN analytics tool"]},
+  {domain:"Monitoring",q:"What is the purpose of NSG flow logs?",a:"NSG flow logs record information about IP traffic flowing through an NSG (source/dest IP, port, protocol, allow/deny) for security analysis and troubleshooting.",hint:"Flow logs are written to a Storage Account and analyzed with Traffic Analytics.",opts:["They block traffic","They record IP traffic through NSGs for security and troubleshooting","They configure NSG rules automatically","They are a type of alert"]},
+  {domain:"Monitoring",q:"What is Microsoft Defender for Cloud (formerly Azure Security Center)?",a:"A Cloud Security Posture Management (CSPM) and workload protection service that assesses security configs, provides a Secure Score, and detects threats across Azure and multi-cloud resources.",hint:"Formerly called Azure Security Center.",opts:["An RBAC management tool","A CSPM + threat protection service with Secure Score","A network firewall","A compliance reporting tool only"]},
+  {domain:"Monitoring",q:"What is Azure Backup and what does it protect?",a:"Azure Backup is a cloud-native backup service that protects VMs, SQL/SAP databases, Azure Files, blobs, and on-premises servers with centralized management via Recovery Services vaults.",hint:"Recovery Services vault stores backups; Backup Center provides unified management.",opts:["A geo-replication feature","A cloud-native backup service for VMs, databases, files, and on-prem","A disaster recovery service only","A storage tier"]},
+  {domain:"Monitoring",q:"What is Azure Site Recovery (ASR)?",a:"ASR provides disaster recovery by continuously replicating VMs and physical servers to a secondary Azure region, enabling failover with defined RPO and RTO.",hint:"ASR can also migrate on-prem VMs to Azure.",opts:["A backup service","Continuous replication for disaster recovery — enables failover to secondary region","A storage replication service","A VNet peering feature"]},
+  {domain:"Monitoring",q:"What is the difference between Azure Backup and Azure Site Recovery?",a:"Azure Backup focuses on data protection (backups with retention policies and restore points). Azure Site Recovery focuses on business continuity — replicating running workloads for rapid failover.",hint:"Use both: Backup for data recovery, ASR for infrastructure DR.",opts:["They are identical","Backup = data protection/restore points; ASR = continuous replication for failover","ASR is a backup service","Backup is for DR; ASR is for backup"]},
+  {domain:"Monitoring",q:"What is a Recovery Services vault?",a:"A storage entity that holds backup data and recovery points for Azure Backup and Azure Site Recovery, with built-in redundancy options (LRS or GRS).",hint:"One vault per region recommended; use Backup Center for multi-vault management.",opts:["A storage account for logs","A vault storing backup data and recovery points for Backup and ASR","A Key Vault for secrets","A compliance archive"]},
+  {domain:"Monitoring",q:"What KQL operator is used to filter Log Analytics results?",a:"Use 'where' to filter: e.g., `where TimeGenerated > ago(1h) and Level == 'Error'`. Combine with summarize, project, and order by for analysis.",hint:"KQL is case-sensitive for field names and string values by default.",opts:["SELECT...WHERE in SQL syntax","'where' operator; combine with summarize, project, order by","'filter' keyword","'grep' command"]},
+  {domain:"Monitoring",q:"What are the Azure Monitor alert types?",a:"Metric alerts (near real-time on numeric data), Log alerts (KQL queries on Log Analytics), Activity Log alerts (control-plane events), and Smart Detection alerts (AI-based anomalies in App Insights).",hint:"Metric alerts fire faster; Log alerts have configurable evaluation frequency.",opts:["One type: email only","Metric, Log (KQL), Activity Log, and Smart Detection alerts","Only threshold-based alerts","Alerts require Log Analytics Premium"]},
+];
+
+const domainList = ["All", ...new Set(cards.map(c=>c.domain))];
+let activeDomain="All", mode="flash", idx=0, correct=0, total=0, answered=false, shuffled=[];
+
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-0.5); }
+
+function init(){
+  const filtered = activeDomain==="All" ? cards : cards.filter(c=>c.domain===activeDomain);
+  shuffled = shuffle(filtered);
+  idx=0; correct=0; total=0; answered=false;
+  renderDomains(); renderCard(); updateStats();
+  document.getElementById("summary").style.display="none";
+  document.getElementById("card-wrap").style.display="block";
+  document.getElementById("controls").style.display=mode==="flash"?"grid":"none";
+}
+
+function renderDomains(){
+  const counts={};
+  domainList.forEach(d=>counts[d]=d==="All"?cards.length:cards.filter(c=>c.domain===d).length);
+  document.getElementById("domain-bar").innerHTML=domainList.map(d=>
+    `<button class="dpill${d===activeDomain?" active":""}" onclick="chooseDomain('${d}')">${d} <span class="cnt">${counts[d]}</span></button>`
+  ).join("");
+}
+
+function chooseDomain(d){ activeDomain=d; init(); }
+
+function setMode(m){
+  mode=m;
+  document.getElementById("mode-flash").className="mbtn"+(m==="flash"?" active":"");
+  document.getElementById("mode-quiz").className="mbtn"+(m==="quiz"?" active":"");
+  init();
+}
+
+const tagClass={Identity:"tag-Identity",Governance:"tag-Governance",Storage:"tag-Storage",Compute:"tag-Compute",Networking:"tag-Networking",Monitoring:"tag-Monitoring"};
+
+function renderCard(){
+  if(idx>=shuffled.length){ showSummary(); return; }
+  const c=shuffled[idx];
+  document.getElementById("card").classList.remove("flipped");
+  answered=false;
+  const tc=tagClass[c.domain]||"";
+  ["front-tag","back-tag"].forEach(id=>{
+    const el=document.getElementById(id);
+    el.textContent=c.domain;
+    el.className="ctag "+tc;
+  });
+  document.getElementById("front-q").textContent=c.q;
+  document.getElementById("back-a").textContent=c.a;
+  document.getElementById("back-hint").textContent=c.hint?"💡 "+c.hint:"";
+  document.getElementById("flip-hint").textContent=mode==="quiz"?"Choose an answer below":"Tap to reveal answer";
+  document.getElementById("hcard").textContent=idx+1;
+  document.getElementById("htotal").textContent=shuffled.length;
+  const pct=Math.round((idx/shuffled.length)*100);
+  document.getElementById("prog").style.width=pct+"%";
+  document.getElementById("prog-label").textContent=pct+"%";
+  const front=document.querySelector(".card-front");
+  const old=front.querySelector(".quiz-opts");
+  if(old) old.remove();
+  if(mode==="quiz") renderQuiz(c);
+  else document.getElementById("controls").style.display="grid";
+}
+
+function renderQuiz(c){
+  document.getElementById("controls").style.display="none";
+  const opts=shuffle(c.opts);
+  const div=document.createElement("div");
+  div.className="quiz-opts";
+  opts.forEach(o=>{
+    const btn=document.createElement("button");
+    btn.className="qopt"; btn.textContent=o;
+    btn.onclick=()=>answerQuiz(o,c,div);
+    div.appendChild(btn);
+  });
+  document.querySelector(".card-front").appendChild(div);
+}
+
+function answerQuiz(chosen,c,div){
+  if(answered) return;
+  answered=true; total++;
+  const isRight=c.opts[0]===chosen;
+  if(isRight) correct++;
+  div.querySelectorAll(".qopt").forEach(btn=>{
+    btn.disabled=true;
+    if(btn.textContent===c.opts[0]) btn.classList.add("correct");
+    else if(btn.textContent===chosen&&!isRight) btn.classList.add("wrong");
+  });
+  document.getElementById("card").classList.add("flipped");
+  updateStats();
+  setTimeout(()=>nextCard(),2200);
+}
+
+function flipCard(){ if(mode==="quiz") return; document.getElementById("card").classList.toggle("flipped"); }
+
+function grade(isCorrect){
+  if(!document.getElementById("card").classList.contains("flipped")){
+    document.getElementById("card").classList.add("flipped"); return;
+  }
+  total++; if(isCorrect) correct++;
+  updateStats(); nextCard();
+}
+
+function nextCard(){ idx++; renderCard(); }
+function updateStats(){ document.getElementById("hscore").textContent=correct+"/"+total; }
+
+function showSummary(){
+  document.getElementById("card-wrap").style.display="none";
+  document.getElementById("controls").style.display="none";
+  const pct=total>0?Math.round((correct/total)*100):0;
+  const emoji=pct>=80?"🎉":pct>=60?"💪":"📚";
+  document.getElementById("prog").style.width="100%";
+  document.getElementById("prog-label").textContent="100%";
+  document.getElementById("summary").style.display="block";
+  document.getElementById("summary").innerHTML=`
+    <div class="summary">
+      <div class="sum-emoji">${emoji}</div>
+      <div class="sum-pct">${pct}%</div>
+      <div class="sum-label">Session complete — ${shuffled.length} cards reviewed</div>
+      <div class="sum-breakdown">
+        <div class="sum-stat"><b style="color:#10b981">${correct}</b>Correct</div>
+        <div class="sum-stat"><b style="color:#ef4444">${total-correct}</b>Incorrect</div>
+        <div class="sum-stat"><b style="color:#64748b">${shuffled.length-total}</b>Skipped</div>
+      </div>
+      <div class="sum-btns">
+        <button class="sum-btn primary" onclick="init()">Study again</button>
+        <button class="sum-btn" onclick="activeDomain='All';init()">All domains</button>
+      </div>
+    </div>`;
+}
+
+init();
+</script>
+</body>
+</html>
